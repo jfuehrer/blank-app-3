@@ -1,0 +1,57 @@
+# past_performance.py
+
+PAST_PERFORMANCE_WEIGHTS = {
+    "Non-Fulfillment": 0.50,
+    "Compliance": 0.35,
+    "Administrative": 0.15
+}
+
+def get_cancellation_score(cancellation_type, count):
+    """Determine score based on the number of cancellations for a given type."""
+    if cancellation_type == "Non-Fulfillment":
+        if count == 0:
+            return 10
+        elif count == 1:
+            return 5
+        else:
+            return 1
+    elif cancellation_type == "Compliance":
+        if count == 0:
+            return 10
+        elif count == 1:
+            return 7
+        else:
+            return 1
+    elif cancellation_type == "Administrative":
+        if count == 0:
+            return 10
+        elif count == 1:
+            return 8
+        else:
+            return 5
+
+def calculate_past_performance_score(vendor_data):
+    """
+    Calculate the overall past performance score based on cancellation data.
+    :param vendor_data: Dictionary containing vendor's past performance data.
+    :return: Final past performance risk score.
+    """
+    # Ensure required keys exist in vendor_data, set default value if missing
+    required_keys = ["Non-Fulfillment", "Compliance", "Administrative"]
+    for key in required_keys:
+        if key not in vendor_data:
+            vendor_data[key] = 0  # Default: Assume no cancellations if missing
+
+    # Compute individual cancellation scores
+    non_fulfillment_score = get_cancellation_score("Non-Fulfillment", vendor_data["Non-Fulfillment"])
+    compliance_score = get_cancellation_score("Compliance", vendor_data["Compliance"])
+    administrative_score = get_cancellation_score("Administrative", vendor_data["Administrative"])
+
+    # Apply weighted formula for final risk score
+    risk_score = (
+        (non_fulfillment_score * PAST_PERFORMANCE_WEIGHTS["Non-Fulfillment"]) +
+        (compliance_score * PAST_PERFORMANCE_WEIGHTS["Compliance"]) +
+        (administrative_score * PAST_PERFORMANCE_WEIGHTS["Administrative"])
+    )
+
+    return round(risk_score, 2)
