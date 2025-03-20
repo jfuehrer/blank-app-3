@@ -1,0 +1,20 @@
+# main.py
+from score_calculator import calculate_vendor_risk_reliability
+
+def main():
+    # Example vendor data
+    vendor_data = {
+        'financial_stability_score': 8.5,
+        'contract_performance_score': 7.2,
+        'foreign_labor_risk_score': 5.5,
+        'past_performance_score': 4.0
+    }
+
+    # Calculate Vendor Risk Reliability Score
+    vrrs_score = calculate_vendor_risk_reliability(vendor_data)
+
+    print("\nVendor Risk Reliability Score (Higher = More Risk):")
+    print(f"VRRS Score: {vrrs_score}")
+
+if __name__ == "__main__":
+    main()
