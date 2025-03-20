@@ -1,0 +1,16 @@
+# test_score_calculator.py
+
+from score_calculator import calculate_vendor_risk_reliability
+
+# Sample vendor data (with real-world values)
+vendor_data_example = {
+    'financial_stability_score': 8.5,
+    'contract_performance_score': 7.2,
+    'foreign_labor_risk_score': 5.5,
+    'past_performance_score': 4.0
+}
+
+# Calculate the VRRS score
+vrrs_score = calculate_vendor_risk_reliability(vendor_data_example)
+
+print(f"Final Vendor Risk Reliability Score (VRRS): {vrrs_score}")
