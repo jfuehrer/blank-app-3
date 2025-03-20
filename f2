@@ -1,0 +1,155 @@
+# foreign_labor.py
+
+COUNTRY_RISK_MULTIPLIER = {
+    'low_risk': 1.0,
+    'moderate_risk': 0.8,
+    'high_risk': 0.6
+}
+
+RISK_CATEGORIZATION = {
+    'low_risk': ['USA', 'Canada', 'Germany', 'France'],
+    'moderate_risk': ['India', 'Brazil', 'South Korea'],
+    'high_risk': ['Russia', 'China', 'Iran']   
+}
+
+VISA_CATEGORY_THRESHOLDS = {
+    'certified': [(0, 10, 10), (11, 20, 8), (21, 50, 6), (51, float('inf'), 4)],
+    'denied': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)],
+    'withdrawn': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)],
+    'certified_expired': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)],
+    'unspecified': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)]
+}
+
+TREND_ADJUSTMENT = {
+    'favorable': 10,
+    'neutral': 6,
+    'unfavorable': 2
+}
+
+# 0. Generic scoring function based on thresholds
+def score_with_thresholds(value, thresholds):
+    """Score a value based on predefined thresholds."""
+    for lower, upper, score in thresholds:
+        if lower <= value <= upper:
+            return score
+    return 0
+
+# 1. Country Risk Multiplier
+def get_country_risk_multiplier(country):
+    """Get the risk multiplier based on the country."""
+    for risk_level, countries in RISK_CATEGORIZATION.items():
+        if country in countries:
+            return COUNTRY_RISK_MULTIPLIER[risk_level]
+    return COUNTRY_RISK_MULTIPLIER['moderate_risk']
+
+# 2. Visa Category Score
+def get_visa_category_score(category, count):
+    """Calculate the score for a specific visa category based on counts."""
+    return score_with_thresholds(count, VISA_CATEGORY_THRESHOLDS.get(category, []))
+
+# 3. Job Sensitivity Score
+def calculate_job_sensitivity_score(low, moderate, high):
+    """Calculate the job sensitivity score based on the number of job types."""
+    total_jobs = low + moderate + high
+    if total_jobs == 0:
+        return 10  # No foreign labor means minimal job risk
+    
+    weighted_score = ((low * 10) + (moderate * 6) + (high * 2)) / total_jobs
+    return weighted_score
+
+# 4. Calculate Country Score with Visa Impact
+def calculate_country_score_with_visa(country_data, visa_counts):
+    """Calculate the foreign labor score for a specific country.
+    :param country_data: dictionary with country and job sensitivity counts 
+    :param visa_counts: dictionary with visa category counts.
+    """
+    country = country_data.get('country', 'Unknown')
+    low_sensitivity_count = country_data.get('job_counts_low', 0)
+    moderate_sensitivity_count = country_data.get('job_counts_moderate', 0)
+    high_sensitivity_count = country_data.get('job_counts_high', 0)
+
+    # Get the country risk multiplier
+    risk_multiplier = get_country_risk_multiplier(country)
+
+    # Calculate the job sensitivity score
+    job_sensitivity_score = calculate_job_sensitivity_score(
+        low_sensitivity_count, moderate_sensitivity_count, high_sensitivity_count
+    )
+
+    # Calculate base visa score and normalize categories
+    total_visa_score = sum(get_visa_category_score(category, count) for category, count in visa_counts.items())
+    normalized_visa_score = total_visa_score / len(visa_counts)
+
+    # Apply the country risk multiplier and weight (0.5) to visa score
+    adjusted_visa_score = normalized_visa_score * risk_multiplier
+
+    # Combine job sensitivity score and adjusted visa score
+    final_country_score = (job_sensitivity_score * 0.50) + (adjusted_visa_score * 0.50)
+    final_country_score = min(max(final_country_score, 0), 10)
+    return final_country_score
+
+# 5. Calculate Final Adjusted Foreign Labor Score
+def calculate_final_adjusted_foreign_labor_score(countries_data, visa_counts):
+    """Calculate the final adjusted foreign labor score across multiple countries."""
+    if not countries_data:
+        return 10  # No foreign labor data
+    
+    # Calculate scores for each country and average them
+    country_scores = [
+        calculate_country_score_with_visa(country_data, visa_counts) for country_data in countries_data
+    ]
+    total_score = sum(country_scores) 
+    normalized_score = total_score / len(countries_data)
+
+    return round(normalized_score, 2)
+
+# 6. Calculate Visa Trend Score
+def calculate_visa_trend_score(trend_data):
+    """Calculate a score based on recent visa trends."""
+    certified_trend = trend_data.get('certified_trend', 'neutral')
+    denied_withdrawn_trend = trend_data.get('denied_withdrawn_trend', 'neutral')
+
+    if certified_trend == 'favorable' or denied_withdrawn_trend == 'favorable':
+        return TREND_ADJUSTMENT['favorable']
+    elif certified_trend == 'neutral' and denied_withdrawn_trend == 'neutral':
+        return TREND_ADJUSTMENT['neutral']
+    else:
+        return TREND_ADJUSTMENT['unfavorable']
+
+# 7. Final Foreign Labor Risk Score
+def calculate_final_foreign_labor_score(vendor_data):
+    """Calculate the final foreign labor score for a vendor."""
+    
+    # Ensure certified_trend and denied_withdrawn_trend exist in vendor_data
+    trend_data = {
+        'certified_trend': vendor_data.get('certified_trend', 'neutral'),
+        'denied_withdrawn_trend': vendor_data.get('denied_withdrawn_trend', 'neutral')  
+    }
+
+    # 1. Adjust foreign labor score with visa impact
+    countries_data = vendor_data.get('countries_data', [])
+    visa_counts = {
+        'certified': vendor_data.get('visa_certified_count', 0),
+        'denied': vendor_data.get('visa_denied_count', 0),
+        'withdrawn': vendor_data.get('visa_withdrawn_count', 0),
+        'certified_expired': vendor_data.get('visa_certified_expired_count', 0),
+        'unspecified': vendor_data.get('visa_unspecified_count', 0)
+    }
+    adjusted_foreign_labor_score = calculate_final_adjusted_foreign_labor_score(countries_data, visa_counts)
+
+    # 2. Visa trend score
+    visa_trend_score = calculate_visa_trend_score(trend_data)
+ 
+    # 3. Final risk score calculation using a weighted formula
+    final_score = adjusted_foreign_labor_score + (visa_trend_score * 0.20)
+    
+    return round(final_score, 2)
+
+# 8. Interpretation of Foreign Labor Risk
+def interpret_foreign_labor_risk_score(score):
+    if score >= 9.0:
+        return "Low Risk", "Vendor has minimal reliance on foreign labor, low-risk roles, and favorable historical trend."
+    elif 7.0 <= score < 9.0:
+        return "Moderate Risk", "Vendor uses some foreign labor for low to moderately sensitive roles but demonstrates reasonable controls."
+    else:
+        return "High Risk", "Vendor heavily relies on foreign labor, high-risk roles, or exhibits increasing dependence on H1-B."
