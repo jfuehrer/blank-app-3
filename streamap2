@@ -1,0 +1,106 @@
+# streamlit_app.py
+
+import streamlit as st
+from score_calculator import calculate_vendor_risk_reliability
+from financial_stability import calculate_financial_stability_score
+from past_performance import calculate_past_performance_score
+from federal_contract import calculate_federal_contract_score
+from foreign_labor import calculate_foreign_labor_score
+
+# Page title
+st.title("Vendor Risk Reliability Score (VRRS) Dashboard")
+st.markdown("### Evaluate vendor risk based on financial stability, contract performance, labor risk, and past performance.")
+
+# Sample vendor data for auto-calculated scores
+sample_vendor_data = {
+    'Altman_Z': 6.5,
+    'DTE': 1.5,
+    'DTI': 0.9,
+    'ROA': 0.12,
+    'ROE': 0.15,
+    'Non-Fulfillment': 1,
+    'Compliance': 0,
+    'Administrative': 2,
+    'Agency Count': 4,
+    'Sub-Agency Count': 3,
+    'Growth Rate': 7,
+    'No Competition Percentage': 20,
+    'foreign_labor_percentage': 5.5,
+    'past_cancellations_score': 4.0
+}
+
+# Calculate initial scores from sample data
+initial_financial_stability_score = calculate_financial_stability_score(sample_vendor_data)
+initial_contract_performance_score = calculate_federal_contract_score(sample_vendor_data)
+initial_foreign_labor_risk_score = calculate_foreign_labor_score(sample_vendor_data)
+initial_past_performance_score = calculate_past_performance_score(sample_vendor_data)
+
+# Sidebar Input Section
+st.sidebar.header("Adjust Vendor Risk Scores")
+
+# Allow users to adjust calculated scores
+financial_stability_score = st.sidebar.slider(
+    "Financial Stability Score (Higher = More Risk)", 
+    min_value=0.0, max_value=10.0, 
+    value=initial_financial_stability_score
+)
+contract_performance_score = st.sidebar.slider(
+    "Contract Performance Score (Higher = More Risk)", 
+    min_value=0.0, max_value=10.0, 
+    value=initial_contract_performance_score
+)
+foreign_labor_risk_score = st.sidebar.slider(
+    "Foreign Labor Risk Score (Higher = More Risk)", 
+    min_value=0.0, max_value=10.0, 
+    value=initial_foreign_labor_risk_score
+)
+past_performance_score = st.sidebar.slider(
+    "Past Performance Score (Higher = More Risk)", 
+    min_value=0.0, max_value=10.0, 
+    value=initial_past_performance_score
+)
+
+# Create adjusted vendor data dictionary
+adjusted_vendor_data = {
+    'financial_stability_score': financial_stability_score,
+    'contract_performance_score': contract_performance_score,
+    'foreign_labor_risk_score': foreign_labor_risk_score,
+    'past_performance_score': past_performance_score
+}
+
+# Button to calculate VRRS Score
+if st.sidebar.button("Calculate VRRS Score"):
+    vrrs_score = calculate_vendor_risk_reliability(adjusted_vendor_data)
+
+    # Display results
+    st.subheader("Vendor Risk Reliability Score (Higher = More Risk)")
+    st.metric(label="VRRS Score", value=vrrs_score)
+
+    # Interpretation based on score thresholds
+    if vrrs_score >= 8.0:
+        risk_category = "Severe Risk"
+        description = "Vendor is unreliable with severe risks. Avoid if possible."
+        color = "red"
+    elif 6.0 <= vrrs_score < 8.0:
+        risk_category = "High Risk"
+        description = "Vendor has high risk and may require close monitoring."
+        color = "orange"
+    elif 4.0 <= vrrs_score < 6.0:
+        risk_category = "Moderate Risk"
+        description = "Vendor is stable with moderate risk."
+        color = "blue"
+    else:
+        risk_category = "Low Risk"
+        description = "Vendor is reliable and has minimal risk."
+        color = "green"
+
+    # Display risk category and interpretation
+    st.markdown(f"### Risk Category: **{risk_category}**")
+    st.markdown(f"#### {description}")
+
+    # Progress bar visualization of risk score
+    st.progress(vrrs_score / 10)
+
+# Footer
+st.markdown("---")
+st.markdown("**Note:** A higher VRRS Score indicates a higher risk level.")
