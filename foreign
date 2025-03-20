@@ -1,0 +1,111 @@
+# foreign_labor.py
+
+def get_foreign_labor_score(percentage):
+    """Calculate score based on foreign labor percentage."""
+    if percentage == 0:
+        return 10
+    elif 1 <= percentage <= 10:
+        return 8
+    elif 11 <= percentage <= 20:
+        return 6
+    elif 21 <= percentage <= 50:
+        return 4
+    else:
+        return 2
+
+def get_country_risk_multiplier(country):
+    """Assign a risk multiplier based on the country."""
+    low_risk_countries = ['USA', 'Canada', 'Germany', 'France']
+    moderate_risk_countries = ['India', 'Brazil', 'South Korea']
+    high_risk_countries = ['Russia', 'China', 'Iran']
+
+    if country in low_risk_countries:
+        return 1.0
+    elif country in moderate_risk_countries:
+        return 0.8
+    elif country in high_risk_countries:
+        return 0.6
+    else:
+        return 0.8  # Default to moderate risk
+
+def calculate_visa_data_score(visa_counts):
+    """Calculate the overall score based on multiple visa categories."""
+    total_count = sum(visa_counts.values())
+    if total_count == 0:
+        return 10  # No visa data means minimal risk
+
+    score_sum = sum(get_visa_category_score(category, count) for category, count in visa_counts.items())
+    return round(score_sum / len(visa_counts), 2)
+
+def get_visa_trend_adjustment(trend_data):
+    """Determine visa trend adjustment score."""
+    # Ensure required keys exist, otherwise set defaults
+    trend_data.setdefault('denied_withdrawn_trend', 'stable')
+    trend_data.setdefault('certified_trend', 'stable')
+
+    if trend_data['denied_withdrawn_trend'] == 'downward' or trend_data['certified_trend'] == 'upward':
+        return 10
+    elif trend_data['certified_trend'] == 'downward' or trend_data['denied_withdrawn_trend'] == 'upward':
+        return 2
+    elif trend_data['certified_trend'] == 'stable' and trend_data['denied_withdrawn_trend'] == 'stable':
+        return 6
+    else:
+        return 6  # Default to stable trend if no data
+
+def calculate_permanent_visa_score(visa_counts, trend_data):
+    """Calculate the score for permanent visa applications."""
+    visa_data_score = calculate_visa_data_score(visa_counts)
+    trend_adjustment = get_visa_trend_adjustment(trend_data)
+    return round((visa_data_score * 0.10) + (trend_adjustment * 0.10), 2)
+
+def calculate_foreign_labor_score(vendor_data):
+    """
+    Calculate foreign labor risk score, considering labor percentage, country risk, and visa trends.
+    :param vendor_data: Dictionary containing vendor's labor and visa details.
+    :return: Foreign labor risk score.
+    """
+    # Ensure required keys exist in vendor_data, otherwise set default values
+    required_keys = [
+        'foreign_labor_percentage', 'country', 'job_counts_low', 'job_counts_moderate', 'job_counts_high',
+        'visa_certified_count', 'visa_denied_count', 'visa_withdrawn_count', 'visa_unspecified_count',
+        'certified_trend', 'denied_withdrawn_trend'
+    ]
+    
+    for key in required_keys:
+        if key not in vendor_data:
+            vendor_data[key] = 0 if "percentage" not in key else "stable"  # Default risk-neutral values
+
+    # Calculate foreign labor score
+    foreign_labor_score = get_foreign_labor_score(vendor_data['foreign_labor_percentage'])
+    
+    # Apply country risk multiplier
+    country_multiplier = get_country_risk_multiplier(vendor_data['country'])
+    adjusted_foreign_labor_score = foreign_labor_score * country_multiplier
+
+    # Calculate job sensitivity score
+    job_sensitivity_score = (
+        (vendor_data['job_counts_low'] * 10) +
+        (vendor_data['job_counts_moderate'] * 6) +
+        (vendor_data['job_counts_high'] * 2)
+    ) / (vendor_data['job_counts_low'] + vendor_data['job_counts_moderate'] + vendor_data['job_counts_high'] + 1)
+
+    # Prepare visa counts and trend data
+    visa_counts = {
+        'certified': vendor_data['visa_certified_count'],
+        'denied': vendor_data['visa_denied_count'],
+        'withdrawn': vendor_data['visa_withdrawn_count'],
+        'unspecified': vendor_data['visa_unspecified_count']
+    }
+
+    trend_data = {
+        'certified_trend': vendor_data['certified_trend'],
+        'denied_withdrawn_trend': vendor_data['denied_withdrawn_trend']
+    }
+
+    # Calculate visa trend adjustment
+    permanent_visa_score = calculate_permanent_visa_score(visa_counts, trend_data)
+
+    # Final foreign labor risk score = adjusted labor score + job sensitivity + visa trends * 0.20
+    final_score = round((adjusted_foreign_labor_score * 0.80) + (permanent_visa_score * 0.20), 2)
+
+    return final_score
