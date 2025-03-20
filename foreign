@@ -28,6 +28,20 @@ def get_country_risk_multiplier(country):
     else:
         return 0.8  # Default to moderate risk
 
+def get_visa_category_score(category, count):
+    """Calculate the score for a specific visa category based on counts."""
+    VISA_CATEGORY_THRESHOLDS = {
+        'certified': [(0, 10, 10), (11, 20, 8), (21, 50, 6), (51, float('inf'), 4)],
+        'denied': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)],
+        'withdrawn': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)],
+        'unspecified': [(0, 10, 6), (11, 20, 4), (21, 50, 2), (51, float('inf'), 1)]
+    }
+
+    for lower, upper, score in VISA_CATEGORY_THRESHOLDS.get(category, []):
+        if lower <= count <= upper:
+            return score
+    return 6  # Default score if category not found
+
 def calculate_visa_data_score(visa_counts):
     """Calculate the overall score based on multiple visa categories."""
     total_count = sum(visa_counts.values())
