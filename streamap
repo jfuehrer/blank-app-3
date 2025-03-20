@@ -1,0 +1,62 @@
+# streamlit_app.py
+
+import streamlit as st
+from score_calculator import calculate_vendor_risk_reliability
+
+# Page title
+st.title("Vendor Risk Reliability Score (VRRS) Dashboard")
+st.markdown("### Evaluate vendor risk based on financial stability, contract performance, labor risk, and past performance.")
+
+# Input fields for vendor data
+st.sidebar.header("Enter Vendor Data")
+
+# User inputs for scoring factors
+financial_stability_score = st.sidebar.number_input("Financial Stability Score (0-10)", min_value=0.0, max_value=10.0, value=8.5, step=0.1)
+contract_performance_score = st.sidebar.number_input("Contract Performance Score (0-10)", min_value=0.0, max_value=10.0, value=7.2, step=0.1)
+foreign_labor_risk_score = st.sidebar.number_input("Foreign Labor Risk Score (0-10)", min_value=0.0, max_value=10.0, value=5.5, step=0.1)
+past_performance_score = st.sidebar.number_input("Past Performance Score (0-10)", min_value=0.0, max_value=10.0, value=4.0, step=0.1)
+
+# Create vendor data dictionary
+vendor_data = {
+    'financial_stability_score': financial_stability_score,
+    'contract_performance_score': contract_performance_score,
+    'foreign_labor_risk_score': foreign_labor_risk_score,
+    'past_performance_score': past_performance_score
+}
+
+# Button to calculate risk score
+if st.sidebar.button("Calculate VRRS Score"):
+    vrrs_score = calculate_vendor_risk_reliability(vendor_data)
+
+    # Display results
+    st.subheader("Vendor Risk Reliability Score (Higher = More Risk)")
+    st.metric(label="VRRS Score", value=vrrs_score)
+
+    # Interpretation based on thresholds
+    if vrrs_score >= 8.0:
+        risk_category = "Severe Risk"
+        description = "Vendor is unreliable with severe risks. Avoid if possible."
+        color = "red"
+    elif 6.0 <= vrrs_score < 8.0:
+        risk_category = "High Risk"
+        description = "Vendor has high risk and may require close monitoring."
+        color = "orange"
+    elif 4.0 <= vrrs_score < 6.0:
+        risk_category = "Moderate Risk"
+        description = "Vendor is stable with moderate risk."
+        color = "blue"
+    else:
+        risk_category = "Low Risk"
+        description = "Vendor is reliable and has minimal risk."
+        color = "green"
+
+    # Display risk category
+    st.markdown(f"### Risk Category: **{risk_category}**")
+    st.markdown(f"#### {description}")
+
+    # Progress bar visualization of risk score
+    st.progress(vrrs_score / 10)
+
+# Footer
+st.markdown("---")
+st.markdown("**Note:** A higher VRRS Score indicates a higher risk level.")
