@@ -1,0 +1,55 @@
+# financial_stability.py
+
+FINANCIAL_METRIC_WEIGHTS = {
+    'Altman_Z': 0.30,
+    'DTE': 0.20,
+    'DTI': 0.20,
+    'ROA': 0.15,
+    'ROE': 0.15
+}
+
+METRIC_RANGES = {
+    'Altman_Z': {'min': 1.0, 'max': 10.0, 'reverse': False},
+    'DTE': {'min': 0.0, 'max': 5.0, 'reverse': True},
+    'DTI': {'min': 0.0, 'max': 3.0, 'reverse': True},
+    'ROA': {'min': -1.0, 'max': 0.20, 'reverse': False},
+    'ROE': {'min': -1.0, 'max': 0.30, 'reverse': False}
+}
+
+def normalize_metric(value, min_val, max_val, reverse=False):
+    """Normalize a metric to a 1-10 scale while handling missing values."""
+    if value is None:
+        return 5  # Default mid-risk if value is missing
+
+    value = max(min(value, max_val), min_val)  # Ensure value is within range
+    normalized = (value - min_val) / (max_val - min_val)  # Normalize to 0-1 scale
+    score = normalized * 9 + 1  # Convert to 1-10 scale
+    return 10 - score if reverse else score  # Reverse for risk-related metrics
+
+def calculate_financial_stability_score(vendor_data):
+    """
+    Calculate the financial stability score using normalized and weighted metrics.
+    :param vendor_data: Dictionary containing financial metric values.
+    :return: Financial stability score (higher = more risk).
+    """
+    # Ensure all required keys are present, otherwise set default mid-range values
+    for key in FINANCIAL_METRIC_WEIGHTS.keys():
+        if key not in vendor_data:
+            vendor_data[key] = 5.0  # Assign a default mid-risk value to prevent errors
+
+    # Normalize each financial metric
+    normalized_scores = [
+        normalize_metric(
+            vendor_data[col], 
+            METRIC_RANGES[col]['min'], 
+            METRIC_RANGES[col]['max'], 
+            METRIC_RANGES[col]['reverse']
+        )
+        for col in FINANCIAL_METRIC_WEIGHTS.keys()
+    ]
+
+    # Apply weights to normalized scores
+    weighted_score = sum(score * FINANCIAL_METRIC_WEIGHTS[col] for score, col in zip(normalized_scores, FINANCIAL_METRIC_WEIGHTS.keys()))
+
+    # Return the final risk score
+    return round(weighted_score / sum(FINANCIAL_METRIC_WEIGHTS.values()), 2)
