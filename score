@@ -1,0 +1,52 @@
+# score_calculator.py
+
+from financial_stability import calculate_financial_stability_score
+from past_performance import calculate_past_performance_score
+from federal_contract import calculate_federal_contract_score
+from foreign_labor import calculate_foreign_labor_score
+
+# Define weightings for the risk components (adjust as needed)
+RISK_WEIGHTS = {
+    'financial_stability': 0.35,   # Higher risk for financially unstable vendors
+    'contract_performance': 0.30,  # Poor contract performance adds risk
+    'foreign_labor_risk': 0.20,    # Dependency on foreign labor increases risk
+    'past_performance': 0.15       # Cancellation history affects risk
+}
+
+def normalize_and_reverse_score(score, scale_min=0, scale_max=10):
+    """
+    Normalize and reverse a score to fit within the 0-10 risk scale where 10 = highest risk.
+    :param score: Original score to normalize and reverse.
+    :param scale_min: Minimum possible score.
+    :param scale_max: Maximum possible score.
+    :return: Normalized and reversed risk score.
+    """
+    normalized = (score - scale_min) / (scale_max - scale_min) * 10
+    return round(10 - normalized, 2)  # Invert so higher scores mean more risk
+
+def calculate_vendor_risk_reliability(vendor_data):
+    """
+    Calculate the Vendor Risk Reliability Score (VRRS) based on multiple risk factors.
+    :param vendor_data: Dictionary containing vendor scoring data.
+    :return: Final risk score (higher = more risk).
+    """
+    # Get scores from individual modules
+    financial_stability_score = calculate_financial_stability_score(vendor_data)
+    contract_performance_score = calculate_federal_contract_score(vendor_data)
+    foreign_labor_risk_score = calculate_foreign_labor_score(vendor_data)
+    past_performance_score = calculate_past_performance_score(vendor_data)
+
+    # Reverse scores where higher = more risk
+    reversed_scores = {
+        'financial_stability': normalize_and_reverse_score(financial_stability_score),
+        'contract_performance': normalize_and_reverse_score(contract_performance_score),
+        'foreign_labor_risk': foreign_labor_risk_score,  # Already scaled correctly
+        'past_performance': past_performance_score  # Already scaled correctly
+    }
+
+    # Calculate the weighted final risk score
+    final_risk_score = sum(
+        reversed_scores[key] * RISK_WEIGHTS[key] for key in RISK_WEIGHTS.keys()
+    )
+
+    return round(final_risk_score, 2)
