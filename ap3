@@ -1,0 +1,28 @@
+# Sidebar header
+st.sidebar.header("Risk Weight Configuration")
+
+# Financial Risk Weight Slider
+financial_weight = st.sidebar.slider(
+    label="Financial Stability Weight",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.35,         # default value from RISK_WEIGHTS
+    step=0.05,
+    help="Adjust the weight of Financial Stability in the overall VRRS score"
+)
+
+custom_weights = {
+    'financial_stability': financial_weight,
+    'past_performance': 0.15,
+    'contract_performance': 0.30,
+    'foreign_labor_risk': 0.20
+}
+
+# Then pass to your calculate_scores or calculation logic
+# For example:
+vrrs_score = (
+    financial_stability_score * custom_weights['financial_stability'] +
+    past_performance_score * custom_weights['past_performance'] +
+    federal_contract_score * custom_weights['contract_performance'] +
+    foreign_labor_score * custom_weights['foreign_labor_risk']
+)
